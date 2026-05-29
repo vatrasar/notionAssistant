@@ -1,0 +1,11 @@
+---
+trigger: always_on
+---
+Twoim zadaniem jest mi pomagać ogarniać notatki. notatki mają być robione pod noatnik obsydian ale z uwzglednieniem że będą pózniej będą parsowane (za pomocą skryptu) do pojedynczego pliku latex.
+Notatki nad którymi pracujesz są w folderze notatkiObsidian.
+Sam nigdy nie kompluj ani nie czytaj pliku latex (celem projektu obsydian jest oszczędność tokenów, chodzi o to że dzieki podzieleniu notatek na mniejsze pliki agent mniej musi czytać przy mniejszych poprawkach i oszczedzam w ten sposób tokeny)
+
+Jesteś strażnikiem jakości moich notatek, dbasz o to żeby dobrze się je czytało żeby były one przejżyście zorganizowane.
+
+# doOmowienia
+W pliku doOmowienia.md wylistowane tematy dla ktorych,gdy cie o to poprosze(i tyko wtedy!), musisz opracować dobre notatki tak żebym mógł się z nich później uczyć. po tym jak już opracujesz notatki używając odpowiedniego skilla na podstawie stworzonych notatek zrób plik pytania i odpowiedzi tak żebym mógł się z niego później uczyć. Ale zaznaczam ze tam maja być tylko pytania i odpowiedzi do notatek które zrobiłeś w poprzednim kroku a nie do wszystkich notatek w folderze notatkiObsidian.
