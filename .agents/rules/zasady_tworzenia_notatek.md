@@ -104,3 +104,19 @@ Aby zachować logiczną kolejność rozdziałów (sekcji) i podrozdziałów (pod
   * Plik `02_instalacja.md` wygeneruje nagłówek: `\subsection{Instalacja}`.
 * **Linki wewnątrznotatkowe**: Podczas linkowania do plików z prefiksami numerycznymi należy podać pełną nazwę pliku, jednak zaleca się stosowanie aliasów, aby w tekście wyświetlała się czysta nazwa:
   * Przykład: `[[02_instalacja|Instalacja Dockera]]`.
+
+---
+
+## 8. Tworzenie tabel Markdown
+
+Skrypt `obsidian_to_latex.py` obsługuje konwersję standardowych tabel Markdown na tabele LaTeX (środowisko `tabular` wewnątrz `center`). Poniżej znajdują się ograniczenia i zasady, do których agent **musi** się stosować podczas tworzenia tabel:
+
+* **Wymagana struktura**: Tabela musi zaczynać się nagłówkiem, a bezpośrednio po nim musi wystąpić linia podziału kolumn (np. `| :--- | :---: | ---: |`).
+* **Wyrównanie tekstu**: Wyrównanie kolumn określa się za pomocą dwukropków w linii podziału:
+  * `:---` – wyrównanie do lewej strony (`l` w LaTeX).
+  * `:---:` – wyśrodkowanie (`c` w LaTeX).
+  * `---:` – wyrównanie do prawej strony (`r` w LaTeX).
+* **Brak elementów blokowych w komórkach**: Wewnątrz komórek tabeli można używać tylko formatowania inline (tekst, pogrubienie `**`, pochylenie `*`, kod inline `` ` `` oraz wiki-linki). Nie wolno umieszczać tam list, cytatów `>` ani bloków kodu z potrójnymi backtickami. Cały wiersz tabeli musi być zapisany w jednej linijce kodu Markdown.
+* **Wiki-linki z aliasami**: Skrypt poprawnie obsługuje wiki-linki z aliasami (np. `[[02_Models|Form Models]]`) zawierające znak pionowej kreski `|`. Znak ten nie rozbije podziału kolumn w tabeli.
+* **Zakaz używania `|` w kodzie/tekście komórek**: Unikaj stosowania znaku `|` w kodzie inline (np. operator logiczny `||`) oraz w tekście komórek. Ponieważ skrypt nie obsługuje escapowania `\|`, każdy taki znak (poza wiki-linkami) zostanie zinterpretowany jako separator kolejnej kolumny i uszkodzi układ tabeli.
+

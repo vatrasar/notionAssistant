@@ -15,6 +15,7 @@ LATEX_TEMPLATE = r"""\documentclass[11pt,a4paper]{article}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{listings}
+\usepackage{tabularx}
 
 % Colors
 \definecolor{brandblue}{rgb}{0.12, 0.43, 0.73} % Premium blue for headings
@@ -56,6 +57,15 @@ LATEX_TEMPLATE = r"""\documentclass[11pt,a4paper]{article}
   morecomment=[l]{\#},
   morestring=[b]"
 }
+
+\lstdefinelanguage{JavaScript}{
+  morekeywords={break, case, catch, continue, debugger, default, delete, do, else, false, finally, for, function, if, in, instanceof, new, null, return, switch, this, throw, true, try, typeof, var, void, while, with, class, const, let, export, import, extends, implements, interface, package, private, protected, public, static, yield, async, await, readonly},
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]',
+  morestring=[b]"
+}
+
 
 \lstset{
   basicstyle=\ttfamily\small,
@@ -146,6 +156,33 @@ class ObsidianToLatex:
         if name:
             name = name[0].upper() + name[1:]
         return name
+
+    def split_row(self, s: str) -> list[str]:
+        parts = []
+        current = []
+        in_link = 0
+        i = 0
+        while i < len(s):
+            if s[i:i+2] == '[[':
+                in_link += 1
+                current.append('[[')
+                i += 2
+            elif s[i:i+2] == ']]':
+                in_link = max(0, in_link - 1)
+                current.append(']]')
+                i += 2
+            elif s[i] == '|':
+                if in_link > 0:
+                    current.append('|')
+                else:
+                    parts.append("".join(current))
+                    current = []
+                i += 1
+            else:
+                current.append(s[i])
+                i += 1
+        parts.append("".join(current))
+        return parts
 
     def collect_section_labels(self):
         # Scan files and folders to build links map
@@ -278,7 +315,9 @@ class ObsidianToLatex:
         in_quote = False
         in_list = None
         
-        for line in lines:
+        i = 0
+        while i < len(lines):
+            line = lines[i]
             stripped = line.strip()
             
             # 1. Code blocks
@@ -288,21 +327,66 @@ class ObsidianToLatex:
                     lang = stripped[3:].strip()
                     if not lang:
                         lang = "Dockerfile" if "dockerfile" in file_path.name.lower() else ""
-                    if lang.lower() == "sql":
-                        if "dockerfile" in file_path.name.lower() or "docker file" in file_path.name.lower():
-                            lang = "Dockerfile"
                     
-                    if lang:
-                        output_lines.append(f"\\begin{{lstlisting}}[language={lang}]")
+                    lang_lower = lang.lower()
+                    # Mapowanie aliasów na nazwy języków znane pakietowi listings
+                    LANG_ALIASES = {
+                        "sql": "SQL",
+                        "ts": "JavaScript", "typescript": "JavaScript",
+                        "angular-ts": "JavaScript",
+                        "js": "JavaScript", "javascript": "JavaScript",
+                        "html": "HTML", "angular-html": "HTML", "xml": "HTML",
+                        "bash": "bash", "sh": "bash",
+                        "python": "Python", "py": "Python",
+                        "java": "Java",
+                        "c": "C", "cpp": "C++", "c++": "C++",
+                        "dockerfile": "Dockerfile",
+                        "php": "PHP",
+                        "ruby": "Ruby",
+                        "perl": "Perl",
+                        "r": "R",
+                    }
+                    # Obsługa specjalnego przypadku: plik Dockerfile z blokiem ```sql
+                    if lang_lower == "sql" and ("dockerfile" in file_path.name.lower() or "docker file" in file_path.name.lower()):
+                        resolved_lang = "Dockerfile"
+                    else:
+                        resolved_lang = LANG_ALIASES.get(lang_lower)
+                    
+                    if resolved_lang:
+                        output_lines.append(f"\\begin{{lstlisting}}[language={resolved_lang}]")
                     else:
                         output_lines.append("\\begin{lstlisting}")
                 else:
                     in_code_block = False
                     output_lines.append("\\end{lstlisting}")
+                i += 1
                 continue
                 
             if in_code_block:
-                output_lines.append(line.rstrip('\n'))
+                # Sanityzacja: zamiana emoji i problematycznych znaków Unicode
+                # na odpowiedniki ASCII (listings nie obsługuje tych znaków)
+                sanitized = line.rstrip('\n')
+                UNICODE_REPLACEMENTS = {
+                    '❌': '[X]',
+                    '✅': '[OK]',
+                    '✓': '[OK]',
+                    '✗': '[X]',
+                    '⚠': '[!]',
+                    '→': '->',
+                    '←': '<-',
+                    '⇒': '=>',
+                    '──>': '-->',
+                    '──': '--',
+                    '─': '-',
+                    '│': '|',
+                    '└': '\\-',
+                    '├': '|-',
+                    '…': '...',
+                }
+                for char, replacement in UNICODE_REPLACEMENTS.items():
+                    sanitized = sanitized.replace(char, replacement)
+                output_lines.append(sanitized)
+                i += 1
                 continue
                 
             # 2. Blockquotes
@@ -316,6 +400,7 @@ class ObsidianToLatex:
                 quote_content = line.split(">", 1)[1].strip()
                 parsed_inline = self.parse_line_inline(quote_content)
                 output_lines.append(parsed_inline)
+                i += 1
                 continue
             elif in_quote:
                 output_lines.append("\\end{quote}")
@@ -335,6 +420,7 @@ class ObsidianToLatex:
                     output_lines.append("\\begin{itemize}")
                     in_list = "itemize"
                 output_lines.append(f"  \\item {parsed_inline}")
+                i += 1
                 continue
                 
             elif numbered_match:
@@ -347,16 +433,100 @@ class ObsidianToLatex:
                     output_lines.append("\\begin{enumerate}")
                     in_list = "enumerate"
                 output_lines.append(f"  \\item {parsed_inline}")
+                i += 1
                 continue
                 
             elif in_list and stripped == "":
                 output_lines.append("")
+                i += 1
                 continue
             elif in_list:
                 output_lines.append(f"\\end{{{in_list}}}")
                 in_list = None
+
+            # 4. Tables Detection & Processing
+            if not in_code_block and not in_quote and not in_list:
+                if i + 1 < len(lines):
+                    next_stripped = lines[i+1].strip()
+                    if '|' in stripped and '|' in next_stripped:
+                        # Check if the next line is a markdown table separator row
+                        if re.match(r'^\|?\s*(:?-+:?)\s*(\|\s*(:?-+:?)\s*)+\|?$', next_stripped):
+                            # Extract header parts
+                            header_parts = [p.strip() for p in self.split_row(stripped)]
+                            if stripped.startswith('|') or (header_parts and header_parts[0] == ''):
+                                header_parts.pop(0)
+                            if stripped.endswith('|') or (header_parts and header_parts[-1] == ''):
+                                header_parts.pop()
+                                
+                            # Extract alignment from separator
+                            sep_parts = [p.strip() for p in self.split_row(next_stripped)]
+                            if next_stripped.startswith('|') or (sep_parts and sep_parts[0] == ''):
+                                sep_parts.pop(0)
+                            if next_stripped.endswith('|') or (sep_parts and sep_parts[-1] == ''):
+                                sep_parts.pop()
+                                
+                            aligns = []
+                            for part in sep_parts:
+                                if part.startswith(':') and part.endswith(':'):
+                                    aligns.append('c')
+                                elif part.endswith(':'):
+                                    aligns.append('r')
+                                else:
+                                    aligns.append('l')
+                                    
+                            # Parse subsequent rows
+                            data_rows = []
+                            table_index = i + 2
+                            while table_index < len(lines):
+                                data_line = lines[table_index]
+                                data_stripped = data_line.strip()
+                                if '|' not in data_stripped or data_stripped == "":
+                                    break
+                                if re.match(r'^\|?\s*(:?-+:?)\s*(\|\s*(:?-+:?)\s*)+\|?$', data_stripped):
+                                    break
+                                    
+                                row_parts = [p.strip() for p in self.split_row(data_stripped)]
+                                if data_stripped.startswith('|') or (row_parts and row_parts[0] == ''):
+                                    row_parts.pop(0)
+                                if data_stripped.endswith('|') or (row_parts and row_parts[-1] == ''):
+                                    row_parts.pop()
+                                    
+                                data_rows.append(row_parts)
+                                table_index += 1
+                                
+                            num_cols = len(aligns)
+                            if num_cols > 0:
+                                # Ostatnia kolumna dostaje typ X (zawijanie tekstu)
+                                # żeby tabelka mieściła się w szerokości strony
+                                tabularx_aligns = list(aligns)
+                                tabularx_aligns[-1] = 'X'
+                                col_spec = "|" + "|".join(tabularx_aligns) + "|"
+                                output_lines.append("\\begin{center}")
+                                output_lines.append(f"\\begin{{tabularx}}{{\\textwidth}}{{{col_spec}}}")
+                                output_lines.append("\\hline")
+                                
+                                # Header
+                                while len(header_parts) < num_cols:
+                                    header_parts.append("")
+                                header_parts = header_parts[:num_cols]
+                                parsed_header = [f"\\textbf{{{self.parse_line_inline(h)}}}" for h in header_parts]
+                                output_lines.append(" & ".join(parsed_header) + " \\\\ \\hline")
+                                
+                                # Data rows
+                                for row_parts in data_rows:
+                                    while len(row_parts) < num_cols:
+                                        row_parts.append("")
+                                    row_parts = row_parts[:num_cols]
+                                    parsed_row = [self.parse_line_inline(cell) for cell in row_parts]
+                                    output_lines.append(" & ".join(parsed_row) + " \\\\ \\hline")
+                                    
+                                output_lines.append("\\end{tabularx}")
+                                output_lines.append("\\end{center}")
+                                
+                                i = table_index
+                                continue
                 
-            # 4. Headers
+            # 5. Headers
             header_match = re.match(r'^(#+)\s+(.*)', stripped)
             if header_match:
                 hashes = header_match.group(1)
@@ -375,11 +545,13 @@ class ObsidianToLatex:
                 parsed_title = self.parse_line_inline(header_title)
                 label_key = self.clean_label_key(header_title)
                 output_lines.append(f"\\{level_name}{{{parsed_title}}}\\label{{sec:{label_key}}}")
+                i += 1
                 continue
                 
-            # 5. Regular Lines
+            # 6. Regular Lines
             parsed_inline = self.parse_line_inline(line.rstrip('\n'))
             output_lines.append(parsed_inline)
+            i += 1
             
         # Cleanups
         if in_code_block:
