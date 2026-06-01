@@ -16,6 +16,12 @@ LATEX_TEMPLATE = r"""\documentclass[11pt,a4paper]{article}
 \usepackage{hyperref}
 \usepackage{listings}
 \usepackage{tabularx}
+\usepackage{array}
+
+% Custom column types for tabularx with alignment
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
 
 % Colors
 \definecolor{brandblue}{rgb}{0.12, 0.43, 0.73} % Premium blue for headings
@@ -496,27 +502,55 @@ class ObsidianToLatex:
                                 
                             num_cols = len(aligns)
                             if num_cols > 0:
-                                # Ostatnia kolumna dostaje typ X (zawijanie tekstu)
-                                # żeby tabelka mieściła się w szerokości strony
-                                tabularx_aligns = list(aligns)
-                                tabularx_aligns[-1] = 'X'
+                                # Pad header parts to num_cols
+                                while len(header_parts) < num_cols:
+                                    header_parts.append("")
+                                header_parts = header_parts[:num_cols]
+
+                                # Normalize data rows to num_cols
+                                cleaned_data_rows = []
+                                for row_parts in data_rows:
+                                    r_parts = list(row_parts)
+                                    while len(r_parts) < num_cols:
+                                        r_parts.append("")
+                                    cleaned_data_rows.append(r_parts[:num_cols])
+
+                                # Calculate max length of cells in each column to decide if it should wrap
+                                col_max_lens = [len(h) for h in header_parts]
+                                for row_parts in cleaned_data_rows:
+                                    for col_idx in range(num_cols):
+                                        col_max_lens[col_idx] = max(col_max_lens[col_idx], len(row_parts[col_idx]))
+
+                                # Determine column specifications
+                                # If a column's max length > 20, we use a wrapping column type (L, C, or R)
+                                # Otherwise we keep the simple non-wrapping type (l, c, or r)
+                                wrap_threshold = 20
+                                tabularx_aligns = []
+                                has_wrap_col = False
+                                
+                                for col_idx, align in enumerate(aligns):
+                                    if col_max_lens[col_idx] > wrap_threshold:
+                                        wrap_align = align.upper() # 'l' -> 'L', 'c' -> 'C', 'r' -> 'R'
+                                        tabularx_aligns.append(wrap_align)
+                                        has_wrap_col = True
+                                    else:
+                                        tabularx_aligns.append(align)
+                                        
+                                # If no column is wrapped, force the last column to wrap
+                                if not has_wrap_col:
+                                    tabularx_aligns[-1] = aligns[-1].upper()
+
                                 col_spec = "|" + "|".join(tabularx_aligns) + "|"
                                 output_lines.append("\\begin{center}")
                                 output_lines.append(f"\\begin{{tabularx}}{{\\textwidth}}{{{col_spec}}}")
                                 output_lines.append("\\hline")
                                 
                                 # Header
-                                while len(header_parts) < num_cols:
-                                    header_parts.append("")
-                                header_parts = header_parts[:num_cols]
                                 parsed_header = [f"\\textbf{{{self.parse_line_inline(h)}}}" for h in header_parts]
                                 output_lines.append(" & ".join(parsed_header) + " \\\\ \\hline")
                                 
                                 # Data rows
-                                for row_parts in data_rows:
-                                    while len(row_parts) < num_cols:
-                                        row_parts.append("")
-                                    row_parts = row_parts[:num_cols]
+                                for row_parts in cleaned_data_rows:
                                     parsed_row = [self.parse_line_inline(cell) for cell in row_parts]
                                     output_lines.append(" & ".join(parsed_row) + " \\\\ \\hline")
                                     
