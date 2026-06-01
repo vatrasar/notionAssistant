@@ -1,5 +1,4 @@
 ---
-
 trigger: always_on
 ---
 
@@ -12,6 +11,10 @@ Jesteś strażnikiem jakości moich notatek, dbasz o to żeby dobrze się je czy
 # doOmowienia
 
 W pliku doOmowienia.md wylistowane tematy dla ktorych,gdy cie o to poprosze(i tyko wtedy!), musisz opracować dobre notatki tak żebym mógł się z nich później uczyć. po tym jak już opracujesz notatki używając odpowiedniego skilla na podstawie stworzonych notatek zrób plik pytania i odpowiedzi tak żebym mógł się z niego później uczyć. Ale zaznaczam ze tam maja być tylko pytania i odpowiedzi do notatek które zrobiłeś w poprzednim kroku a nie do wszystkich notatek w folderze notatkiObsidian.
+
+chciałbym żebyś też (w swoim folderze .) zrobił plik notesFormToday.md dał ostatnie notatki tak żebym mógł się łatwo zapoznać tylko z tym co zostało ostatnio dodane.
+
+po wykonaniu roboty, wyczyść jeszcze plik doOmówienia tak żeby był gotow do przyjecia nowych tematów do omowienia.
 
 # doWprowadzenia
 
